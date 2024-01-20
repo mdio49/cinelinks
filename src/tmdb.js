@@ -8,19 +8,23 @@ const headers = {
     Authorization: `Bearer ${apiReadAccessToken}`
 }
 
-export function authorizeTMBD() {
-    const url = 'https://api.themoviedb.org/3/authentication';
-    const options = {
-        method: 'GET',
-        headers
-    };
-    fetch(url, options)
-        .then(res => res.json())
-        .then(json => console.log(json))
-        .catch(err => console.error('error:' + err));
+export async function authorizeTMBD() {
+    try {
+        const result = await request({
+            url: 'https://api.themoviedb.org/3/authentication',
+            method: 'GET',
+            headers
+        });
+        if (!result?.success) {
+            console.log(result);
+        }
+    }
+    catch (err) {
+        console.error('error', err);
+    }
 }
 
-export async function searchForLinks(input) {
+export async function searchForFilm(input) {
     const films = await request({
         url: 'https://api.themoviedb.org/3/search/movie',
         method: 'GET',
@@ -29,26 +33,43 @@ export async function searchForLinks(input) {
             query: input
         }
     });
-    const topResult = films.results[0];
-    console.log('film', topResult);
+    //console.log('films', films);
+    const film = films?.results[0] || null;
+    if (film) {
+        await fillCredits(film);
+    }
+    return film;
+}
+
+export async function fillCredits(film) {
     const credits = await request({
-        url: `https://api.themoviedb.org/3/movie/${topResult.id}/credits`,
+        url: `https://api.themoviedb.org/3/movie/${film.id}/credits`,
         method: 'GET',
         headers
     });
-    console.log('credits', [...credits.cast, ...credits.crew.filter(c => c.job === 'Director')]);
+    //console.log('credits', credits);
+    film.cast = credits.cast;
+    film.directors = credits.crew.filter(c => c.job === 'Director');
+}
+
+export async function searchForLinks(film, page = 1) {
+    const people = [...film.cast, ...film.directors];
     const result = await request({
         url: 'https://api.themoviedb.org/3/discover/movie',
         method: 'GET',
         headers,
         params: {
-            with_people: [...credits.cast, ...credits.crew.filter(c => c.job === 'Director')].map(c => c.id).join('|')
+            page,
+            with_people: people.map(c => c.id).join('|')
         }
     });
-
-    console.log('films', result);
-    return {
-        film: topResult,
-        links: result?.results || []
-    };
+    //console.log('films', result);
+    const links = result?.results?.filter(m => m.id !== film.id) || [];
+    await Promise.all(links.map(async l => {
+        await fillCredits(l);
+        const other = [...l.cast, ...l.directors];
+        l.connections = people.filter(p => other.some(o => o.id === p.id));
+    }))
+    //console.log('links', links)
+    return links.filter(l => l.connections?.length > 0);
 }

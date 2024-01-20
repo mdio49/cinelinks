@@ -42,6 +42,12 @@ body {
     font-size: large;
 }
 
+footer {
+    position: sticky;
+    bottom: 0vh;
+    font-size: x-small;
+}
+
 input.search {
     border: 2px solid #282c34;
     border-radius: 10px;
@@ -80,4 +86,46 @@ button:hover {
 
 button:active {
     background: #464d5a;
+}
+
+.movie-result {
+    border: 2px solid #464d5a;
+    border-radius: 10px;
+    background: #1a1a1a;
+    margin: 4px;
+    display: flex;
+    width: 500px;
+}
+
+.movie-result .thumbnail {
+    flex: 1 0 auto;
+    margin: 0px 10px;
+    width: 100px;
+    height: 150px;
+}
+
+.movie-result .thumbnail img {
+    max-width: 100px;
+    max-height: 150px;
+}
+
+.movie-result .content {
+    justify-items: center;
+    flex: 1 0 calc(80% - 30px);
+    text-align: left;
+    vertical-align: middle;
+    margin-right: 10px;
+}
+
+.movie-title {
+    
+}
+
+.movie-description {
+    font-size: small;
+}
+
+.connections {
+    font-size: small;
+    font-style: italic;
 }
