@@ -64,7 +64,7 @@ function IndexPage() {
     }
 
     return (
-        <>
+        <div className="content">
             <p>Movie Link Search</p>
             <SearchBar onSearch={onSearch} />
             <br />
@@ -116,7 +116,7 @@ function IndexPage() {
             :
                 <footer>This product uses the TMDB API but is not endorsed or certified by TMDB.</footer>
             }
-        </>
+        </div>
     );
 }
 

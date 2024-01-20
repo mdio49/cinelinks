@@ -10,7 +10,7 @@ function SearchBar({ onSearch = (input: string) => {} }) {
 
     return (
         <>
-            <div style={{ display: 'flex' }}>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
                 <input className="search" type="search" placeholder="Enter Movie Title, Actor or Director" value={input} onChange={(ev) => setInput(ev.target.value)} onKeyDown={(ev) => {
                     if (ev.key === "Enter") {
                         search();
