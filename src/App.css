@@ -89,7 +89,7 @@ button:active {
     background: #464d5a;
 }
 
-.content {
+.page-content {
     width: 90%;
     max-width: 500px;
 }
@@ -101,6 +101,7 @@ button:active {
     margin: 4px 0px;
     display: flex;
     width: 100%;
+    transition-duration: 1s;
 }
 
 .movie-result .thumbnail {
@@ -123,8 +124,9 @@ button:active {
     margin-right: 10px;
 }
 
-.movie-title {
-    
+.movie-title .connection-title:hover {
+    color: cadetblue;
+    cursor: pointer;
 }
 
 .movie-description {
@@ -132,6 +134,44 @@ button:active {
 }
 
 .connections {
-    font-size: small;
-    font-style: italic;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-items: left;
 }
+
+.connection {
+    border: 1px solid white;
+    border-radius: 5px;
+    padding: 3px 5px 3px 3px;
+    margin-right: 5px;
+    margin-bottom: 5px;
+    font-size: 0.75em;
+    font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+    /*font-weight: bold;*/
+    text-transform: uppercase;
+    user-select: none;
+}
+
+.connection:hover {
+    cursor: pointer;
+    border-color: cadetblue;
+}
+
+.connection:hover .name {
+    color: cadetblue;
+}
+
+.connection .delete {
+    vertical-align: middle;
+}
+
+.connection .delete .material-icons {
+    font-size: 1.5em;
+}
+
+.connection .delete:hover {
+    color: #ff4040;
+}
+
+

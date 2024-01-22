@@ -1,37 +1,63 @@
 import React from 'react';
 import SearchBar from "../components/SearchBar";
-import { searchForFilm, searchForLinks } from '../tmdb';
+import { searchForFilm, searchForFilms, searchForLinks, searchForPerson } from '../tmdb';
 import { useScrollPosition } from '../hooks';
 
 function IndexPage() {
     const [film, setFilm] = React.useState<any>(null);
+    const [person, setPerson] = React.useState<any>(null);
     const [links, setLinks] = React.useState<any>([]);
     const [page, setPage] = React.useState(0);
 
     const [loading, setLoading] = React.useState(false);
     const [searchingLinks, setSearchingLinks] = React.useState(false);
+    const [searchingEnd, setSearchingEnd] = React.useState(false);
     const linkSearchLock = React.useRef(false);
+
+    const [excludedPeople, setExcludedPeople] = React.useState<any[]>([]);
 
     const scrollY = useScrollPosition();
 
     React.useEffect(() => {
-        if (!film)
-            return; 
+        if (!film && !person)
+            return;
+        if (searchingEnd)
+            return;
         if (scrollY > document.body.scrollHeight - window.innerHeight - 100) {
             fetchLinks();
         }
-    }, [scrollY, film, page]);
+    }, [scrollY, film, person, page]);
 
     async function fetchLinks() {
         if (linkSearchLock.current)
             return;
+
         linkSearchLock.current = true;
         setSearchingLinks(true);
-        //console.log('fetching links', page);
+
         try {
-            const newLinks = await searchForLinks(film, page + 1);
-            setLinks([...links, ...newLinks]);
-            setPage(page + 1);
+            let newLinks: any[] = [];
+            if (film) {
+                // Filter out excluded people.
+                const filteredLinks = links?.filter((l: any) => !l.connections.every((c: any) => excludedPeople.includes(c.id))) || [];
+                setLinks(filteredLinks);
+
+                // Fetch new links.
+                const fetchedLinks = await searchForLinks(film, page + 1, excludedPeople);
+                newLinks = [...filteredLinks, ...fetchedLinks];
+            }
+            else {
+                const fetchedLinks = await searchForFilms(person, page + 1);
+                newLinks = [...links, ...fetchedLinks];
+            }
+
+            if (newLinks?.length > 0) {
+                setLinks(newLinks);
+                setPage(page + 1);
+            }
+            else {
+                setSearchingEnd(true);
+            }
         }
         catch (err) {
             console.log('Error fetching links', err);
@@ -44,12 +70,19 @@ function IndexPage() {
 
     async function onSearch(input: string) {
         setLoading(true);
-        setFilm(null);
-        setLinks([]);
-        setPage(0);
+        reset();
         try {
-            const film = await searchForFilm(input);
+            const [film, person] = await Promise.all([
+                searchForFilm(input),
+                searchForPerson(input)
+            ]);
             setFilm(film);
+            /*if (film) {
+                setFilm(film);
+            }
+            else if (person) {
+                setPerson(person);
+            }*/
         }
         catch (err) {
             console.log('Error fetching film', err);
@@ -59,12 +92,38 @@ function IndexPage() {
         }
     }
 
+    function reset() {
+        setFilm(null);
+        setPerson(null);
+        setLinks([]);
+        setPage(0);
+        setExcludedPeople([]);
+        setSearchingEnd(false);
+    }
+
+    function navigateToFilm(film: any) {
+        reset();
+        setFilm(film);
+    }
+
+    function navigateToPerson(person: any) {
+        reset();
+        setPerson(person);
+    }
+
+    function excludePerson(id: number) {
+        const newExcludedPeople = Array.from(new Set([...excludedPeople, id]));
+        const filteredLinks = links?.filter((l: any) => !l.connections.every((c: any) => newExcludedPeople.includes(c.id))) || [];
+        setExcludedPeople(newExcludedPeople);
+        setLinks(filteredLinks);
+    }
+
     function getFilmDisplayTitle(film: any) {
         return `${film.original_title} (${new Date(film.release_date).getFullYear()})`;
     }
 
     return (
-        <div className="content">
+        <div className="page-content">
             <p>Movie Link Search</p>
             <SearchBar onSearch={onSearch} />
             <br />
@@ -103,8 +162,25 @@ function IndexPage() {
                                         <img src={`https://image.tmdb.org/t/p/w500/${m.poster_path}`}></img>
                                     </div>
                                     <div className="content">
-                                        <p className="movie-title">{getFilmDisplayTitle(m)}</p>
-                                        <p className="connections">Through: {m.connections.map((c: any) => c.name).join(', ')}</p>
+                                        <p className="movie-title">
+                                            <span className="connection-title" onClick={(ev) => navigateToFilm(m)}>
+                                                {getFilmDisplayTitle(m)}
+                                            </span>
+                                        </p>
+                                        <p className="connections">
+                                            {m.connections.map((c: any) => {
+                                                return (
+                                                    <span className="connection">
+                                                        <span className="delete" onClick={(ev) => excludePerson(c.id)}>
+                                                            <i className="material-icons">close</i>
+                                                        </span>
+                                                        <span className="name" style={{ ...(excludedPeople.includes(c.id) ? { textDecoration: 'line-through' } : {}) }} /*onClick={(ev) => navigateToPerson(c)}*/>
+                                                            {c.name}
+                                                        </span>
+                                                    </span>
+                                                );
+                                            })}
+                                        </p>
                                     </div>
                                 </div>
                             );

@@ -41,6 +41,19 @@ export async function searchForFilm(input) {
     return film;
 }
 
+export async function searchForPerson(input) {
+    const people = await request({
+        url: 'https://api.themoviedb.org/3/search/person',
+        method: 'GET',
+        headers,
+        params: {
+            query: input
+        }
+    });
+    //console.log('people', people);
+    return people?.results[0] || null;
+}
+
 export async function fillCredits(film) {
     const credits = await request({
         url: `https://api.themoviedb.org/3/movie/${film.id}/credits`,
@@ -52,15 +65,15 @@ export async function fillCredits(film) {
     film.directors = credits.crew.filter(c => c.job === 'Director');
 }
 
-export async function searchForLinks(film, page = 1) {
-    const people = [...film.cast, ...film.directors];
+export async function searchForLinks(film, page = 1, excludedPeople = []) {
+    const people = [...film.cast, ...film.directors].filter(p => !excludedPeople.includes(p.id));
     const result = await request({
         url: 'https://api.themoviedb.org/3/discover/movie',
         method: 'GET',
         headers,
         params: {
             page,
-            with_people: people.map(c => c.id).join('|')
+            with_people: people.map(p => p.id).join('|')
         }
     });
     //console.log('films', result);
@@ -69,7 +82,22 @@ export async function searchForLinks(film, page = 1) {
         await fillCredits(l);
         const other = [...l.cast, ...l.directors];
         l.connections = people.filter(p => other.some(o => o.id === p.id));
-    }))
+    }));
     //console.log('links', links)
     return links.filter(l => l.connections?.length > 0);
+}
+
+export async function searchForFilms(person, page = 1) {
+    const result = await request({
+        url: 'https://api.themoviedb.org/3/discover/movie',
+        method: 'GET',
+        headers,
+        params: {
+            page,
+            with_people: person
+        }
+    });
+    const films = result?.results || [];
+    await Promise.all(films.map(l => fillCredits(l)));
+    return films.filter(f => f.cast.some(c => c.id === person.id) || f.directors.some(d => d.id === person.id));
 }
