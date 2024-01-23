@@ -8,6 +8,14 @@ const headers = {
     Authorization: `Bearer ${apiReadAccessToken}`
 }
 
+export function getFilmDisplayTitle(film: any) {
+    return `${film.original_title} (${new Date(film.release_date).getFullYear() || '???'})`;
+}
+
+export function getPersonSubtitle(person: any) {
+    return person.known_for_department === 'Acting' ? 'Actor' : 'Director';
+}
+
 export async function authorizeTMBD() {
     try {
         const result = await request({
@@ -24,7 +32,31 @@ export async function authorizeTMBD() {
     }
 }
 
-export async function searchForFilm(input) {
+export async function searchGeneral(input: string): Promise<any[]> {
+    const result = await request({
+        url: 'https://api.themoviedb.org/3/search/multi',
+        method: 'GET',
+        headers,
+        params: {
+            query: input
+        }
+    });
+    const results = result?.results?.filter((r: any) => {
+        if (r.media_type === 'movie') {
+            return true;
+        }
+        else if (r.media_type === 'person') {
+            return r.known_for_department === 'Acting' || r.known_for_department === 'Directing';
+        }
+        else {
+            return false;
+        }
+    });
+    //console.log('results', results);
+    return results || null;
+}
+
+export async function searchForFilm(input: string) {
     const films = await request({
         url: 'https://api.themoviedb.org/3/search/movie',
         method: 'GET',
@@ -41,7 +73,7 @@ export async function searchForFilm(input) {
     return film;
 }
 
-export async function searchForPerson(input) {
+export async function searchForPerson(input: string) {
     const people = await request({
         url: 'https://api.themoviedb.org/3/search/person',
         method: 'GET',
@@ -54,7 +86,7 @@ export async function searchForPerson(input) {
     return people?.results[0] || null;
 }
 
-export async function fillCredits(film) {
+export async function fillCredits(film: any) {
     const credits = await request({
         url: `https://api.themoviedb.org/3/movie/${film.id}/credits`,
         method: 'GET',
@@ -62,10 +94,10 @@ export async function fillCredits(film) {
     });
     //console.log('credits', credits);
     film.cast = credits.cast;
-    film.directors = credits.crew.filter(c => c.job === 'Director');
+    film.directors = credits.crew.filter((c: any) => c.job === 'Director');
 }
 
-export async function searchForLinks(film, page = 1, excludedPeople = []) {
+export async function searchForLinks(film: any, page = 1, excludedPeople: any[] = []) {
     const people = [...film.cast, ...film.directors].filter(p => !excludedPeople.includes(p.id));
     const result = await request({
         url: 'https://api.themoviedb.org/3/discover/movie',
@@ -77,27 +109,28 @@ export async function searchForLinks(film, page = 1, excludedPeople = []) {
         }
     });
     //console.log('films', result);
-    const links = result?.results?.filter(m => m.id !== film.id) || [];
-    await Promise.all(links.map(async l => {
+    const links = result?.results?.filter((m: any) => m.id !== film.id) || [];
+    await Promise.all(links.map(async (l: any) => {
         await fillCredits(l);
         const other = [...l.cast, ...l.directors];
         l.connections = people.filter(p => other.some(o => o.id === p.id));
     }));
     //console.log('links', links)
-    return links.filter(l => l.connections?.length > 0);
+    return links.filter((l: any) => l.connections?.length > 0);
 }
 
-export async function searchForFilms(person, page = 1) {
+export async function searchForFilms(person: any, page = 1) {
     const result = await request({
         url: 'https://api.themoviedb.org/3/discover/movie',
         method: 'GET',
         headers,
         params: {
             page,
-            with_people: person
+            with_people: person.id
         }
     });
     const films = result?.results || [];
-    await Promise.all(films.map(l => fillCredits(l)));
-    return films.filter(f => f.cast.some(c => c.id === person.id) || f.directors.some(d => d.id === person.id));
+    await Promise.all(films.map((l: any) => fillCredits(l)));
+    console.log('f', films)
+    return films.filter((f: any) => f.cast.some((c: any) => c.id === person.id) || f.directors.some((d: any) => d.id === person.id));
 }

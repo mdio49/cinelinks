@@ -1,7 +1,16 @@
 import React from 'react';
 
-function SearchBar({ onSearch = (input: string) => {} }) {
+type AutocompleteOption = {
+    label: JSX.Element | string,
+    onClick?: () => void
+}
+
+function SearchBar({ autocompleteOptions = new Array<AutocompleteOption>(), onInputChange = (input: string) => {}, onSearch = (input: string) => {} }) {
     const [input, setInput] = React.useState('');
+
+    React.useEffect(() => {
+        onInputChange(input);
+    }, [input]);
 
     async function search() {
         onSearch(input);
@@ -18,6 +27,22 @@ function SearchBar({ onSearch = (input: string) => {} }) {
                 }} />
                 <button onClick={search}>Search</button>
             </div>
+            {autocompleteOptions?.length > 0 &&
+                <div className="search-autocomplete">
+                    {autocompleteOptions.map(o => {
+                        return (
+                            <div className="autocomplete-option" onClick={() => {
+                                if (o.onClick) {
+                                    setInput('');
+                                    o.onClick();
+                                }
+                            }}>
+                                {o.label}
+                            </div>
+                        )
+                    })}
+                </div>
+            }
         </>
     );
 }

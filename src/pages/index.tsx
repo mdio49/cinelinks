@@ -1,7 +1,10 @@
 import React from 'react';
 import SearchBar from "../components/SearchBar";
-import { searchForFilm, searchForFilms, searchForLinks, searchForPerson } from '../tmdb';
+import { fillCredits, getFilmDisplayTitle, getPersonSubtitle, searchForFilm, searchForFilms, searchForLinks, searchForPerson, searchGeneral } from '../tmdb';
 import { useScrollPosition } from '../hooks';
+import { debounce } from '../utils';
+import MovieResult from '../components/MovieResult';
+import PersonResult from '../components/PersonResult';
 
 function IndexPage() {
     const [film, setFilm] = React.useState<any>(null);
@@ -14,6 +17,7 @@ function IndexPage() {
     const [searchingEnd, setSearchingEnd] = React.useState(false);
     const linkSearchLock = React.useRef(false);
 
+    const [autoCompleteResults, setAutoCompleteResults] = React.useState<any[]>([]);
     const [excludedPeople, setExcludedPeople] = React.useState<any[]>([]);
 
     const scrollY = useScrollPosition();
@@ -27,6 +31,20 @@ function IndexPage() {
             fetchLinks();
         }
     }, [scrollY, film, person, page]);
+
+    const fillAutoComplete = debounce(async (input) => {
+        if (!input) {
+            setAutoCompleteResults([]);
+            return;
+        }
+        try {
+            const results = await searchGeneral(input);
+            setAutoCompleteResults([...results].splice(0, 5));
+        }
+        catch (err) {
+            console.log(err);
+        }
+    });
 
     async function fetchLinks() {
         if (linkSearchLock.current)
@@ -72,17 +90,15 @@ function IndexPage() {
         setLoading(true);
         reset();
         try {
-            const [film, person] = await Promise.all([
-                searchForFilm(input),
-                searchForPerson(input)
-            ]);
-            setFilm(film);
-            /*if (film) {
+            const results = await searchGeneral(input);
+            const result = results?.[0] || null;
+            if (result?.media_type === 'film') {
+                await fillCredits(film);
                 setFilm(film);
             }
-            else if (person) {
-                setPerson(person);
-            }*/
+            else {
+                setPerson(result);
+            }
         }
         catch (err) {
             console.log('Error fetching film', err);
@@ -118,71 +134,94 @@ function IndexPage() {
         setLinks(filteredLinks);
     }
 
-    function getFilmDisplayTitle(film: any) {
-        return `${film.original_title} (${new Date(film.release_date).getFullYear()})`;
-    }
+    const autoCompleteOptions = autoCompleteResults?.map(r => {
+        if (r.media_type === 'person') {
+            return {
+                label: (
+                    <>
+                        <span>{r.name}</span>&nbsp;<span style={{ fontSize: 'x-small', color: 'gray' }}>{getPersonSubtitle(r)}</span>
+                    </>
+                ),
+                onClick: async () => {
+                    //reset();
+                    setAutoCompleteResults([]);
+                    navigateToPerson(r);
+                }
+            };
+        }
+        else {
+            return {
+                label: (
+                    <>
+                        <span>{getFilmDisplayTitle(r)}</span>&nbsp;<span style={{ fontSize: 'x-small', color: 'gray' }}>Movie</span>
+                    </>
+                ),
+                onClick: async () => {
+                    //reset();
+                    setAutoCompleteResults([]);
+                    await fillCredits(r);
+                    navigateToFilm(r);
+                }
+            };
+        }
+    });
 
     return (
         <div className="page-content">
             <p>Movie Link Search</p>
-            <SearchBar onSearch={onSearch} />
+            <SearchBar onSearch={onSearch} /*onInputChange={fillAutoComplete} autocompleteOptions={autoCompleteOptions}*/ />
             <br />
             {loading ?
                 <b>Loading...</b>
             : film ?
                 <div style={{ fontSize: 'medium' }}>
-                    {film ? <>
-                        <div className="movie-result">
-                            <div className="thumbnail">
-                                <img src={`https://image.tmdb.org/t/p/w500/${film.poster_path}`}></img> 
-                            </div>
-                            <div className="content">
-                                <p className="movie-title"><b>{getFilmDisplayTitle(film)}</b></p>
-                                <p className="movie-description">
-                                    Directed By: {film.directors.map((d: any) => d.name).join(', ')}
-                                </p>
-                                <p className="movie-description" style={{ maxHeight: '50px' }}>
-                                    Cast: {film.cast.length > 10 ?
-                                        [...film.cast].splice(0, 10).map((c: any) => c.name).join(', ') + '...'
-                                    :
-                                        film.cast.map((c: any) => c.name).join(', ')
-                                    }
-                                </p>
-                            </div>
-                        </div>
-                        <hr />
-                    </> : <>
-                        <b>No Film Found</b>
-                    </>}
+                    <MovieResult film={film} />
+                    <hr />
                     {links?.length > 0 ?
                         links?.map((m: any) => {
                             return (
                                 <div className="movie-result">
-                                    <div className="thumbnail">
-                                        <img src={`https://image.tmdb.org/t/p/w500/${m.poster_path}`}></img>
-                                    </div>
-                                    <div className="content">
-                                        <p className="movie-title">
-                                            <span className="connection-title" onClick={(ev) => navigateToFilm(m)}>
-                                                {getFilmDisplayTitle(m)}
-                                            </span>
-                                        </p>
-                                        <p className="connections">
-                                            {m.connections.map((c: any) => {
-                                                return (
-                                                    <span className="connection">
-                                                        <span className="delete" onClick={(ev) => excludePerson(c.id)}>
-                                                            <i className="material-icons">close</i>
+                                    <div className="header">
+                                        <div className="thumbnail">
+                                            <img src={`https://image.tmdb.org/t/p/w500/${m.poster_path}`}></img>
+                                        </div>
+                                        <div className="content">
+                                            <p className="movie-title">
+                                                <span className="connection-title" onClick={(ev) => navigateToFilm(m)}>
+                                                    {getFilmDisplayTitle(m)}
+                                                </span>
+                                            </p>
+                                            <p className="connections">
+                                                {m.connections.map((c: any) => {
+                                                    return (
+                                                        <span className="connection">
+                                                            <span className="delete" onClick={(ev) => excludePerson(c.id)}>
+                                                                <i className="material-icons">close</i>
+                                                            </span>
+                                                            <span className="name" style={{ ...(excludedPeople.includes(c.id) ? { textDecoration: 'line-through' } : {}) }} onClick={(ev) => navigateToPerson(c)}>
+                                                                {c.name}
+                                                            </span>
                                                         </span>
-                                                        <span className="name" style={{ ...(excludedPeople.includes(c.id) ? { textDecoration: 'line-through' } : {}) }} /*onClick={(ev) => navigateToPerson(c)}*/>
-                                                            {c.name}
-                                                        </span>
-                                                    </span>
-                                                );
-                                            })}
-                                        </p>
+                                                    );
+                                                })}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
+                            );
+                        })
+                    : searchingLinks ?
+                        <b>Loading...</b>
+                    : null}
+                </div>
+            : person ?
+                <div style={{ fontSize: 'medium' }}>
+                    <PersonResult person={person} />
+                    <hr />
+                    {links?.length > 0 ?
+                        links?.map((m: any) => {
+                            return (
+                                <MovieResult film={m} onClickTitle={() => navigateToFilm(m)} />
                             );
                         })
                     : searchingLinks ?
