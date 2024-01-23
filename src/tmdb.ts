@@ -131,6 +131,6 @@ export async function searchForFilms(person: any, page = 1) {
     });
     const films = result?.results || [];
     await Promise.all(films.map((l: any) => fillCredits(l)));
-    console.log('f', films)
+    //console.log('films', films)
     return films.filter((f: any) => f.cast.some((c: any) => c.id === person.id) || f.directors.some((d: any) => d.id === person.id));
 }
