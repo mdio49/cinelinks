@@ -92,9 +92,9 @@ function IndexPage() {
         try {
             const results = await searchGeneral(input);
             const result = results?.[0] || null;
-            if (result?.media_type === 'film') {
-                await fillCredits(film);
-                setFilm(film);
+            if (result?.media_type === 'movie') {
+                await fillCredits(result);
+                setFilm(result);
             }
             else {
                 setPerson(result);
