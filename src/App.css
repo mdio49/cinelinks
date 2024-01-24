@@ -54,19 +54,24 @@ input.search {
     background: #1a1a1a;
     color: white;
     width: 100%;
-    max-width: 400px;
     height: 50px;
     padding: 0em 1em;
     font-family: Verdana, Geneva, Tahoma, sans-serif;
     font-size: small;
-    margin-right: 5px;
+    /*margin-right: 5px;*/
+}
+
+div.search {
+    position: relative;
 }
 
 div.search-autocomplete {
-    position: relative;
+    position: absolute;
     background: #1a1a1a;
-    border: 1px solid #202020;
-    top: 1px;
+    border: 1px solid #ffffff;
+    width: calc(100% - 4px);
+    left: 2px;
+    z-index: 1;
 }
 
 div.search-autocomplete .autocomplete-option {
@@ -74,16 +79,22 @@ div.search-autocomplete .autocomplete-option {
     min-height: 20px;
     font-size: small;
     padding: 8px;
-    cursor: pointer;
     color: white;
     transition-duration: 0.1s;
 }
 
-div.search-autocomplete .autocomplete-option:hover {
+div.search-autocomplete .autocomplete-option.selected {
+    background: #eeeeee;
+    color: black;
+    cursor: pointer;
+    transition-duration: 0.1s;
+}
+
+/*div.search-autocomplete .autocomplete-option:hover {
     background: #eeeeee;
     color: black;
     transition-duration: 0.1s;
-}
+}*/
 
 @keyframes Button-Press {
     from {
@@ -115,6 +126,11 @@ button:active {
 .page-content {
     width: 90%;
     max-width: 500px;
+}
+
+.movie-search {
+    max-width: 400px;
+    height: 50px;
 }
 
 .movie-result {

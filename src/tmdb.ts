@@ -8,6 +8,14 @@ const headers = {
     Authorization: `Bearer ${apiReadAccessToken}`
 }
 
+function isValidMovie(film: any) {
+    return film.release_date && new Date(film.release_date).getTime() <= Date.now();
+}
+
+function isValidPerson(person: any) {
+    return person.known_for_department === 'Acting' || person.known_for_department === 'Directing';
+}
+
 export function getFilmDisplayTitle(film: any) {
     return `${film.original_title} (${new Date(film.release_date).getFullYear() || '???'})`;
 }
@@ -43,10 +51,10 @@ export async function searchGeneral(input: string): Promise<any[]> {
     });
     const results = result?.results?.filter((r: any) => {
         if (r.media_type === 'movie') {
-            return true;
+            return isValidMovie(r);
         }
         else if (r.media_type === 'person') {
-            return r.known_for_department === 'Acting' || r.known_for_department === 'Directing';
+            return isValidPerson(r);
         }
         else {
             return false;
@@ -109,7 +117,7 @@ export async function searchForLinks(film: any, page = 1, excludedPeople: any[] 
         }
     });
     //console.log('films', result);
-    const links = result?.results?.filter((m: any) => m.id !== film.id) || [];
+    const links = result?.results?.filter((m: any) => m.id !== film.id && isValidMovie(m)) || [];
     await Promise.all(links.map(async (l: any) => {
         await fillCredits(l);
         const other = [...l.cast, ...l.directors];

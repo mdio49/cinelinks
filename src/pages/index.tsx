@@ -169,7 +169,7 @@ function IndexPage() {
     return (
         <div className="page-content">
             <p>Movie Link Search</p>
-            <SearchBar onSearch={onSearch} /*onInputChange={fillAutoComplete} autocompleteOptions={autoCompleteOptions}*/ />
+            <SearchBar onSearch={onSearch} onInputChange={fillAutoComplete} autocompleteOptions={autoCompleteOptions} />
             <br />
             {loading ?
                 <b>Loading...</b>
