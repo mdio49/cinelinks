@@ -69,6 +69,8 @@ div.search-autocomplete {
     position: absolute;
     background: #1a1a1a;
     border: 1px solid #ffffff;
+    border-radius: 10px;
+    overflow: hidden;
     width: calc(100% - 4px);
     left: 2px;
     z-index: 1;

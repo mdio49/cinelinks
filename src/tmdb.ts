@@ -17,7 +17,7 @@ function isValidPerson(person: any) {
 }
 
 export function getFilmDisplayTitle(film: any) {
-    return `${film.original_title} (${new Date(film.release_date).getFullYear() || '???'})`;
+    return `${film.original_title /*+ (film.original_language !== 'en' ? ` / ${film.title}` : '')*/} (${new Date(film.release_date).getFullYear() || '???'})`;
 }
 
 export function getPersonSubtitle(person: any) {
@@ -122,6 +122,7 @@ export async function searchForLinks(film: any, page = 1, excludedPeople: any[] 
         await fillCredits(l);
         const other = [...l.cast, ...l.directors];
         l.connections = people.filter(p => other.some(o => o.id === p.id));
+        l.connections = l.connections.filter((p: any, i: number) => !l.connections.some((q: any, j: number) => p.id === q.id && i > j));
     }));
     //console.log('links', links)
     return links.filter((l: any) => l.connections?.length > 0);
